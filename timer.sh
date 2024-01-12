@@ -1,5 +1,6 @@
 #!/run/current-system/sw/bin/bash
 
+    # FIXME: -- replace the current shebang ( this one is for NIXOS ) with your's
 
 RED='\033[0;31m'
 # GREEN='\033[0;32m'
@@ -79,9 +80,18 @@ while true; do
 
     paplay /home/kenzo/Audios/i_need_you.mp3
 
+    # TODO: -- replace the path with the alarm's tone frowith your own path
+
     notify-send -u normal "Bash alarm" "the alarm has finished"
 
     break
 sleep 1
 
 done
+
+
+# TODO: 1>    Create multiple instances of the alarm
+# TODO: 2>    Calender suppport
+# TODO: 3>    Error handiling , loggings and debuggings
+# TODO: 4>   Volume control and audio selections
+
