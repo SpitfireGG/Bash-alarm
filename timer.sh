@@ -17,6 +17,7 @@ while getopts ":h:m:s:t:" opt; do
         m) minutes=$OPTARG ;;
         s) seconds=$OPTARG ;;
         t) tag=$OPTARG ;;
+        w) end=$OPTARG ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
             exit 1
@@ -39,6 +40,11 @@ hours=${hours:-0}
 minutes=${minutes:-0}
 seconds=${seconds:-0}
 read -rp " please soemthing you want to work on  " tag
+echo ""
+echo ""
+
+
+read -rp " what do you wanna do after the timer ends ?  " end
 echo ""
 echo ""
 
@@ -71,10 +77,34 @@ echo ""
 echo ""
 
 
+#array of stuffs to do after the timer ends;
+arr=("smoke" "chess" "code\ more" "shorts" "reels")
+
+poets=("Is this the best yoy've got ??" "if you are the artist of your own life then why no create a better picture of yourself" "Do everything they said you cant" "Discipline or regret ?")
+poe_len=${#poets[*]};
+rnd_idx=$((RANDOM % poe_len));
+
+
 #adjust the 
 message="The timer has finished!  "
 pos=$(( (cols - ${#message}) /2 ))
 printf "%${pos}s%s\n" " " "$message"
+
+if [[ "$end" =~ ^[0-9]+$ || "$end" =~ ^[-][0-9]+$  ]]; then
+    echo "the what or the so called end parameter needs to be a string";
+    exit 1;
+else
+    if [[ "${arr[*]}" =~ $end ]]; then
+echo ""
+echo ""
+        
+        printf "${GREEN}%${pos}s%s\n" " " " A poet for the badass motherfucker !!! "
+
+echo ""
+echo ""
+        printf "${RED} %${pos}s%s\n" " " "${poets[rnd_idx]}"
+    fi
+fi
 
 while true; do 
 
