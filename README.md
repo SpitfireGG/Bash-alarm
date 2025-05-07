@@ -1,2 +1,4 @@
 ## **Bash-alarm**
-a simple alarm clock written in bash with percentage calculation ( progress line )
+---
+
+**A simple alarm clock written in bash with progress bar**
