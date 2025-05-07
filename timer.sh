@@ -64,9 +64,14 @@ echo ""
 
 while [ $total_seconds -gt 0 ]; do
 
-    # implement  progress bar
+    # implement  progress bar 
+    
+    ## the actual percentage calculation is done here
     progress=$((100 - total_seconds * 100 / (hours * 3600 + minutes * 60 + seconds)))
 
+    ## generate a seq of num join them with #
+    ## remove all the digit leaving only the #
+    ## remove all the empty spaces and divide by 2 as at 100% bar  will be 50 char wide
     echo -ne "${YELLOW}\r[$(seq -s '#' $((progress / 2)) | tr -d '[:digit:]')$(seq -s ' ' $(((100 - progress) / 2)) | tr -d '[:digit:]')] $progress% ${NC}"
 
    sleep 1
