@@ -1,13 +1,57 @@
-#!/run/current-system/sw/bin/bash
+#!/run/current-system/sw/bin/sh
+    
 
     # NOTE: -- replace the current shebang ( this one is for NIXOS )
 
 RED='\033[0;31m'
-# GREEN='\033[0;32m'
+GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
 NC='\033[0m'
 
+## global vars
 cols=$(tput cols)
+version="1.1"
+
+## implement the pause/resume functionality
+
+display_help() {
+     help="$(cat << EOF
+    ${BOLD} TIMER ${version}${NC}
+
+    ${BOLD} Usage:${NC}
+    $(basename "$0") -h [ hours ] -m [ minutes ] -s [ seconds ]
+
+    ${BOLD} Required:${NC}
+    at least one of the options need to be provided of integer type 
+    -h hours
+    -m minutes
+    -s seconds
+
+    ${BOLD} Additional optional args: ${NC}
+    -t      text         tag to attach to the timer, define what you are working on 
+    -f      file         filename where the audio is located      
+    -e      text         action to take after the timer ends
+    -c                   load from a configuration file
+    -s                   load from the most recent state
+    -l                   list the most recent timers
+    -v                   display version
+
+    ${BOLD} Controls: ${NC}
+    ctrl + z            stop the timer but instance keeps runnning in the bg
+    ctrl + c            resumes from the most recent state
+
+
+    ${BLUE}If you find any bugs or issues, please report it to me\n${NC}
+EOF
+    )"
+    printf "%b" "${help}";
+}
+
+
 
 while getopts ":h:m:s:t:" opt; do
     case $opt in
@@ -29,15 +73,22 @@ while getopts ":h:m:s:t:" opt; do
 done
 
 # check if at least one of the options is provided
+check_options() {
 if [[ -z $hours && -z $minutes && -z $seconds ]]; then
     echo -e "Usage:${RED} $0 -h [hours] -m [minutes] -s [seconds]"
     exit 1
 fi
+}
 
 # set default values if not provided ( default is 0 )
-hours=${hours:-0}
-minutes=${minutes:-0}
-seconds=${seconds:-0}
+default_options() {
+    hours=${hours:-0}
+    minutes=${minutes:-0}
+    seconds=${seconds:-0}
+}
+
+
+
 
 # select music to play after the alarm ends
 read -rp " Enter the location of the music or ring to be played after the work ends  "  ring
@@ -124,3 +175,6 @@ done
 # TODO: 3>    Error handiling , loggings and debuggings
 # TODO: 4>   Volume control and audio selections
 
+display_help
+check_options
+default_options
