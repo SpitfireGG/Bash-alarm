@@ -1,5 +1,4 @@
 #!/run/current-system/sw/bin/sh
-    
 
     # NOTE: -- replace the current shebang ( this one is for NIXOS )
 
@@ -17,6 +16,7 @@ cols=$(tput cols)
 version="1.1"
 
 ## implement the pause/resume functionality
+### implement helper functions
 
 display_help() {
      help="$(cat << EOF
@@ -50,6 +50,37 @@ EOF
     )"
     printf "%b" "${help}";
 }
+
+## error
+error_msg() {
+    echo -e "${RED} Error: $1${NC}" >&2;
+    exit 1;
+}
+
+## input
+check_input() {
+     _check_input_var=$1;
+     _check_input_value=$2;
+
+    if [ -z "${_check_input_var}"  ]; then
+        return 0;
+    fi
+        
+    if [ "${_check_input_value}" =~ ^[0-9]+$  ]; then
+        echo "the what or the so called end parameter needs to be a string" >&2;
+        exit 1;
+    fi
+}
+
+format_time(){
+    ## using the posix sh way:  is undefined in posix sh
+     _format_time_seconds=$1
+     _format_time_hours=$((seconds / 3600))
+     _format_time_minutes=$(((seconds % 3600) / 60))
+     _format_time_secs=$((seconds % 60))
+    printf "%02d:%02d:%02d" $hours $minutes $secs
+}
+
 
 
 
@@ -147,9 +178,6 @@ message="The timer has finished!  "
 pos=$(( (cols - ${#message}) /2 ))
 printf "%${pos}s%s\n" " " "$message"
 
-if [[ "$end" =~ ^[0-9]+$ || "$end" =~ ^[-][0-9]+$  ]]; then
-    echo "the what or the so called end parameter needs to be a string";
-    exit 1;
 else
     if [[ "${arr[*]}" =~ $end ]]; then
 echo ""
@@ -178,3 +206,4 @@ done
 display_help
 check_options
 default_options
+check_input
