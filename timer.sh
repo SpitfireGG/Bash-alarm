@@ -1,4 +1,5 @@
-#!/run/current-system/sw/bin/sh
+#!/run/current-system/sw/bin/bash
+    
 
     # NOTE: -- replace the current shebang ( this one is for NIXOS )
 
@@ -14,6 +15,7 @@ NC='\033[0m'
 ## global vars
 cols=$(tput cols)
 version="1.1"
+history_file="$HOME/config/bash_alarm/history"
 
 ## implement the pause/resume functionality
 ### implement helper functions
@@ -59,27 +61,62 @@ error_msg() {
 
 ## input
 check_input() {
-     _check_input_var=$1;
-     _check_input_value=$2;
+    local var=$1;
+    local value=$2;
 
-    if [ -z "${_check_input_var}"  ]; then
+    if [[ -z "${var}"  ]]; then
         return 0;
     fi
         
-    if [ "${_check_input_value}" =~ ^[0-9]+$  ]; then
+    if [ "$value" =~ ^[0-9]+$  ]; then
         echo "the what or the so called end parameter needs to be a string" >&2;
         exit 1;
     fi
 }
 
+# format the time
 format_time(){
-    ## using the posix sh way:  is undefined in posix sh
-     _format_time_seconds=$1
-     _format_time_hours=$((seconds / 3600))
-     _format_time_minutes=$(((seconds % 3600) / 60))
-     _format_time_secs=$((seconds % 60))
-    printf "%02d:%02d:%02d" $hours $minutes $secs
+    local seconds=$1
+    local hours=$((seconds / 3600))
+    local minutes=$(((seconds % 3600) / 60))
+    local secs=$((seconds % 60))
+    printf "%02d:%02d:%02d" $hours $minutes $secs;
 }
+
+# center the text in the terminal by adding some padding to the left of the text
+center_text() {
+    local text=$1;
+
+    # finds the width of the terminal
+    local width=$(stty size | cut -c 3-6);
+
+    # the # gets the length of the text here
+    local padding=$(( (width - ${#text}) /2 ));
+    printf "%${padding}s%s\n" " " "${text}"; 
+}
+
+# we would want to save the history to some location
+save_history() {
+    mkdir -p "$(dirname "$history_file")";
+    echo echo "$(date '+%Y-%m-%d %H:%M:%S') $hours $minutes $seconds \"$tag\" \"$ring\" \"$end\"" >> "$history_file"
+}
+
+init_timer() {
+    command ...
+}
+
+display_progress() {
+    command ...
+}
+
+pause_timer() {
+    command ...
+}
+resume_timer() {
+    command ...
+}
+
+
 
 
 
