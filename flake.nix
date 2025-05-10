@@ -5,7 +5,6 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
   };
-
   outputs = {
     self,
     nixpkgs,
@@ -25,8 +24,6 @@
 
           # defining requird dependencies
           buildInputs = with pkgs; [
-            bash
-            coreutils # for basic toolings
             ncurses # for tput
             pulseaudio # for paplay
             libnotify # for notification
