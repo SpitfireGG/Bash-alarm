@@ -1,5 +1,5 @@
 {
-  description = "An enhanced timer in bash";
+  description = "An enhanced timer cli utility";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -15,10 +15,10 @@
       pkgs = nixpkgs.legacyPackages.${system};
     in {
       packages = {
-        default = self.packages.${system}.timer;
+        default = self.packages.${system}.chime;
 
         ## make derivation for the package
-        timer = pkgs.stdenv.mkDerivation {
+        chime = pkgs.stdenv.mkDerivation {
           name = "enhanced-timer";
           version = "1.0";
           src = ./.;
@@ -26,31 +26,31 @@
           # defining requird dependencies
           buildInputs = with pkgs; [
             bash
-            coreutils  # for basic toolings
+            coreutils # for basic toolings
             ncurses # for tput
             pulseaudio # for paplay
             libnotify # for notification
           ];
           installPhase = ''
             mkdir -p $out/bin
-            cp timer.sh $out/bin/timer
-            chmod +x $out/bin/timer
+            cp chime.sh $out/bin/chime
+            chmod +x $out/bin/chime
           '';
         };
       };
 
       apps = {
-        default = self.apps.${system}.timer;
-        timer = {
+        default = self.apps.${system}.chime;
+        chime = {
           type = "app";
-          program = "${self.packages.${system}.timer}/bin/timer";
+          program = "${self.packages.${system}.chime}/bin/chime";
         };
       };
 
       # dev shell with additional deps ( if required )
       devShells.default = pkgs.mkShell {
         buildInputs =
-          self.packages.${system}.timer.buildInputs
+          self.packages.${system}.chime.buildInputs
           ++ [
             pkgs.shellcheck # for script linting
           ];
