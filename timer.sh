@@ -1,6 +1,6 @@
 #!/run/current-system/sw/bin/bash
 
-# NOTE: -- replace the current shebang ( this one is for NIXOS )
+# NOTE: For NixOS, use #!/run/current-system/sw/bin/bash
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -11,18 +11,17 @@ CYAN='\033[0;36m'
 BOLD='\033[1m'
 NC='\033[0m'
 
-## global vars
+# Global variables
 cols=$(tput cols)
 version="1.1"
-config_file="$HOME/.config/bash_alarm/config/"
-history_file="$HOME/config/bash_alarm/history/"
+config_dir="$HOME/.config/bash_alarm"
+config_file="$config_dir/config"
+history_file="$config_dir/history"
+state_file="$config_dir/state"
 pause_time=""
 last_milestone=0
 
-## implement the pause/resume functionality
-### implement helper functions
-
-## display the help section
+# Display the help section
 display_help() {
     help="$(
         cat <<EOF
@@ -46,7 +45,7 @@ display_help() {
     -l                   list the most recent timers
     -v                   display version
 
-    ${BOLD} Controls: ${NC}
+    ${PURPLE}${BOLD} Controls: ${NC}
     ctrl + z            stop the timer but instance keeps runnning in the bg
     ctrl + c            resumes from the most recent state
 
@@ -57,13 +56,11 @@ EOF
     printf "%b" "${help}"
 }
 
-## print error message
 error_msg() {
-    echo -e "${RED} Error: $1${NC}" >&2
+    echo -e "${RED}Error: $1${NC}" >&2
     exit 1
 }
 
-## format time
 format_time() {
     local seconds=$1
     local hours=$((seconds / 3600))
@@ -72,61 +69,64 @@ format_time() {
     printf "%02d:%02d:%02d" $hours $minutes $secs
 }
 
-# center the text in the terminal by adding some padding to the left of the text
+# Center text in terminal by adding padding to the left
 center_text() {
     local text=$1
-
-    # finds the width of the terminal
-    local width
-    width=$(stty size | cut -c 3-6)
-
-    # the # gets the length of the text here
+    local width=$(tput cols)
     local padding=$(((width - ${#text}) / 2))
     printf "%${padding}s%s\n" " " "${text}"
 }
 
-# we would want to save the history to some location
 save_history() {
     mkdir -p "$(dirname "$history_file")"
-    echo echo "$(date '+%Y-%m-%d %H:%M:%S') $hours $minutes $seconds \"$tag\" \"$ring\" \"$end\"" >>"$history_file"
-    echo ""
-    echo "saved to file"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') $hours $minutes $seconds \"$tag\" \"$ring\" \"$end\"" >>"$history_file"
+    echo -e "${GREEN}Saved to history file${NC}"
+}
+
+save_state() {
+    mkdir -p "$(dirname "$state_file")"
+    echo "hours=$hours" >"$state_file"
+    echo "minutes=$minutes" >>"$state_file"
+    echo "seconds=$seconds" >>"$state_file"
+    echo "tag=\"$tag\"" >>"$state_file"
+    echo "ring=\"$ring\"" >>"$state_file"
+    echo "end=\"$end\"" >>"$state_file"
+    echo "total_seconds=$total_seconds" >>"$state_file"
+    echo "start_time=$start_time" >>"$state_file"
+    echo "original_seconds=$original_seconds" >>"$state_file"
+    echo -e "${YELLOW}State saved${NC}"
 }
 
 check_milestone() {
-
     local percent=$1
     local milestones=(25 50 75)
-
     for milestone in "${milestones[@]}"; do
-
         if [ "$percent" -ge "$milestone" ] && [ "$last_milestone" -lt "$milestone" ]; then
             if command -v notify-send &>/dev/null; then
-                notify-send "timer progress" "$milestone% complete for task: $tag"
+                notify-send "Timer Progress" "$milestone% complete for task: $tag"
             fi
             last_milestone=$milestone
             break
         fi
-
     done
 }
 
 show_history() {
-
-    command ...
-
+    if [ -f "$history_file" ]; then
+        echo -e "${BOLD}${CYAN}Timer History:${NC}"
+        cat "$history_file"
+    else
+        echo -e "${YELLOW}No history found${NC}"
+    fi
+    exit 0
 }
 
-# check if at least one of the options is provided
 check_options() {
-
     if [[ -z $hours && -z $minutes && -z $seconds ]]; then
-        echo -e "Usage:${RED} $0 -h [hours] -m [minutes] -s [seconds]"
-        exit 1
+        error_msg "At least one of -h, -m, or -s must be provided"
     fi
 }
 
-# set default values if not provided ( default is 0 )
 default_options() {
     hours=${hours:-0}
     minutes=${minutes:-0}
@@ -134,11 +134,11 @@ default_options() {
 }
 
 config_load() {
-    if [ -f "$config" ]; then
+    if [ -f "$config_file" ]; then
         source "$config_file"
     else
-        set_default_ring="/usr/share/sounds/freedesktop/stereo/complete.oga"
-        default_end="take a break"
+        default_ring="/usr/share/sounds/freedesktop/stereo/complete.oga"
+        default_end="Take a break"
     fi
 }
 
@@ -160,37 +160,37 @@ display_progress() {
 pause_timer() {
     if [ -z "$pause_time" ]; then
         pause_time=$(date +%s)
-        echo -e "\n${YELLOW} timer paused, to resume press CTRL + z${NC}"
-    else
-        resume_timer
+        echo -e "\n${YELLOW}Timer paused, press $(fg) to resume${NC}"
     fi
 }
 
 resume_timer() {
     if [ -n "$pause_time" ]; then
-        local current_time
-        current_time=$(date +%s)
+        local current_time=$(date +%s)
         local pause_duration=$((current_time - pause_time))
         start_time=$((start_time + pause_duration))
         unset pause_time
-        echo -e "\n${GREEN} timer resumed${NC}"
+        echo -e "\n${GREEN}Timer resumed${NC}"
     fi
 }
 
 init_timer() {
-
     hours=${hours:-0}
     minutes=${minutes:-0}
     seconds=${seconds:-0}
-    ring=${ring:-$set_default_ring}
+    ring=${ring:-$default_ring}
     end=${end:-$default_end}
 
-    # convert everything to seconds
+    # Validate inputs
+    if ! [[ "$hours" =~ ^[0-9]+$ && "$minutes" =~ ^[0-9]+$ && "$seconds" =~ ^[0-9]+$ ]]; then
+        error_msg "Hours, minutes, and seconds must be non-negative integers"
+    fi
+
+    # Convert to seconds
     total_seconds=$((hours * 3600 + minutes * 60 + seconds))
 
-    # check if the time duration is equal or smaller than 0
     if [ $total_seconds -le 0 ]; then
-        echo "timer duration must be greater than 0"
+        error_msg "Timer duration must be greater than 0"
     fi
 
     start_time=$(date +%s)
@@ -198,32 +198,26 @@ init_timer() {
 }
 
 run_timer() {
-
-    # display  the timer information
-
     clear
-    echo -e "${BOLD}${BLUE}timer${NC}"
-    echo -e "${CYAN}task:${NC} $tag"
-    echo -e "${CYAN}duration:${NC} $(format_time $total_seconds)"
-    echo -e "${CYAN}end action:${NC} $end"
+    echo -e "${BOLD}${BLUE}Timer${NC}"
+    echo -e "${BLUE}Task:${NC} $tag"
+    echo -e "${BLUE}Duration:${NC} $(format_time $total_seconds)"
+    echo -e "${BLUE}End action:${NC} $end"
     echo ""
 
-    tput civis # to hide cursor
+    # hide the cursor
+    tput civis
 
     while [ $total_seconds -gt 0 ]; do
-        #
-        # skip updates if timer is paused
         if [ -n "$pause_time" ]; then
             sleep 1
             continue
         fi
 
-        # calculate progress
         local current_time=$(date +%s)
         local elapsed=$((current_time - start_time))
         local adjusted_total=$((original_seconds - elapsed))
 
-        # ensure we dont go negative seconds
         if [ $adjusted_total -lt 0 ]; then
             adjusted_total=0
         fi
@@ -231,45 +225,39 @@ run_timer() {
         total_seconds=$adjusted_total
         local progress=$((100 - (total_seconds * 100 / original_seconds)))
 
-        # calculate optimal bar width based on terminal size
-        local bar_width=$((cols > 80 ? 50 : cols / 2 - 10))
+        local bar_width=$((cols > 80 ? 50 : (cols / 2 > 10 ? cols / 2 - 10 : 10)))
 
-        # format times
         local elapsed_formatted=$(format_time $elapsed)
         local remaining_formatted=$(format_time $total_seconds)
 
-        # check for milestones
         check_milestone $progress
 
-        # display progress
         echo -ne "\r${YELLOW}$(display_progress $bar_width $progress) ${BOLD}${progress}%${NC}"
-        echo -ne " | ${GREEN}elapsed: ${elapsed_formatted}${NC} | ${RED}remaining: ${remaining_formatted}${NC}  "
+        echo -ne " | ${GREEN}Elapsed: ${elapsed_formatted}${NC} | ${RED}Remaining: ${remaining_formatted}${NC}  "
 
         sleep 1
 
-        # exit if total_seconds reached 0
         if [ $total_seconds -le 0 ]; then
             break
         fi
     done
 
     echo ""
-    tput cnorm # show cursor
+
+    ## show cursor
+    tput cnorm
 }
 
+## play alarm
 play_alarm() {
-
-    # display completion message
     echo ""
     center_text "╔══════════════════════════════════════╗"
-    center_text "║          timer complete!             ║"
+    center_text "║          Timer Complete!             ║"
     center_text "╚══════════════════════════════════════╝"
     echo ""
-    echo ""
-    center_text "task: $tag"
+    center_text "Task: $tag"
     echo ""
 
-    # play sound
     if [ -f "$ring" ]; then
         if command -v paplay &>/dev/null; then
             paplay "$ring" &
@@ -278,63 +266,90 @@ play_alarm() {
         elif command -v afplay &>/dev/null; then
             afplay "$ring" &
         else
-            echo -e "${YELLOW}warning: no audio player found. cannot play sound.${NC}"
+            echo -e "${YELLOW}Warning: No audio player found. Cannot play sound.${NC}"
         fi
     else
-        echo -e "${YELLOW}warning: sound file not found: $ring${NC}"
+        echo -e "${YELLOW}Warning: Sound file not found: $ring${NC}"
     fi
 
-    # send notification
     if command -v notify-send &>/dev/null; then
-        notify-send -u critical "timer complete" "task: $tag is finished!"
+        notify-send -u critical "Timer Complete" "Task: $tag is finished!"
     fi
 
-    # check for action
     if [ -n "$end" ]; then
-        echo -e "${GREEN}next action: $end${NC}"
+        echo -e "${GREEN}Next action: $end${NC}"
     fi
 
-    if [ -f "$STATE_FILE" ]; then
-        rm "$STATE_FILE"
+    if [ -f "$state_file" ]; then
+        rm "$state_file"
     fi
 }
 
+## main function
 main() {
 
-    trap pause_timer SIGTSTP                 # ctrl+z
-    trap resume_timer SIGCONT                # resume after ctrl+z
-    trap 'save_state; exit 0' SIGINT SIGTERM # ctrl+c
+    ## NOTE: pause and resume functonality is not working currnetly
+    trap pause_timer SIGTSTP                 # to pause:  Ctrl+Z
+    trap resume_timer SIGCONT                # to resume: Ctrl+Z
+    trap 'save_state; exit 0' SIGINT SIGTERM # to save state and exit:  Ctrl+C
 
-    # parse command line arguments
-    hours=0
-    minutes=0
-    seconds=0
+    # Parse command line arguments
+    hours=""
+    minutes=""
+    seconds=""
     tag=""
     ring=""
     end=""
+    use_config=false
+    resume=true
+    list_history=false
 
-    while getopts ":h:m:s:t:" opt; do
+    while getopts ":h:m:s:t:f:e:crlv" opt; do
         case $opt in
         h) hours=$OPTARG ;;
         m) minutes=$OPTARG ;;
         s) seconds=$OPTARG ;;
         t) tag=$OPTARG ;;
-        u) ring=$OPTARG ;;
-        w) end=$OPTARG ;;
-        \?) display_help ;;
+        f) ring=$OPTARG ;;
+        e) end=$OPTARG ;;
+        c) use_config=true ;;
+        r) resume=true ;;
+        l) list_history=true ;;
+        v)
+            echo "Version $version"
+            exit 0
+            ;;
+        \?) error_msg "Invalid option: -$OPTARG" ;;
         esac
     done
 
+    if [ "$list_history" = true ]; then
+        show_history
+    fi
+
     config_load
 
-    if [[ $hours -eq 0 && $minutes -eq 0 && $seconds -eq 0 && "$use_config" != "true" && ! -f "$STATE_FILE" ]]; then
-        read -rp "enter hours (0-99): " hours
-        read -rp "enter minutes (0-59): " minutes
-        read -rp "enter seconds (0-59): " seconds
-        read -rp "enter task description: " tag
-        read -rp "enter sound file path (or leave empty for default): " ring
-        read -rp "enter end action (or leave empty for default): " end
+    if [ "$resume" = true ] && [ -f "$state_file" ]; then
+        source "$state_file"
+        echo -e "${GREEN}Resumed from saved state${NC}"
+
+    elif [ "$use_config" = true ] && [ -f "$config_file" ]; then
+        source "$config_file"
+
+    elif [[ -z $hours && -z $minutes && -z $seconds ]]; then
+
+        read -rp "Enter hours: " hours
+        read -rp "Enter minutes: " minutes
+        read -rp "Enter seconds: " seconds
+        read -rp "Enter task description: " tag
+        read -rp "Enter sound file path (or leave empty for default): " ring
+        read -rp "Enter end action (or leave empty for default): " end
+
     fi
+
+    default_options
+
+    check_options
 
     init_timer
 
@@ -344,4 +359,5 @@ main() {
 
     play_alarm
 }
+
 main "$@"
